@@ -18,13 +18,19 @@ using namespace std;
 //There are 8 (0-7) Numbers/Notes in each Level
 //
 //			0
-//		7	|	1
+//			|	
+//
+//              7               1
 //		\		/
+//
 //	6				2
-// 	-				-
-//		5		3
-// 		/	4	\
-// 			|
+// 	-                               -
+//			
+//              5               3
+// 		/		\
+//
+// 			4
+//                      |
 //
 struct Note_Location
 {
@@ -72,12 +78,4 @@ void *PlayNote(Note note_to_play)
 {
 	
 	return NULL;
-}
-
-int main()
-{
-	std::vector<Note> Notes;
-	Note tempNote("do","some_path");
-	Notes.push_back(tempNote);
-	cout << "starting";
 }
