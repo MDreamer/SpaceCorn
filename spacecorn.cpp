@@ -19,11 +19,11 @@
  *
  *
  * *********************************************************************/
-#include "mcp3008Spi.h"
+#include "mcp3008spi/mcp3008Spi.h"
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
-#include "ws2812-rpi.h"
+#include "ws2812-rpi/ws2812-rpi.h"
 
 #define MAX_NOTES	8
  
