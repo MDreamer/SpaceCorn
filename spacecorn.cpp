@@ -25,6 +25,9 @@
 #include <time.h>
 #include "ws2812-rpi/ws2812-rpi.h"
 #include "notes.cpp"
+#include "json/json.h"
+#include <fstream>
+#include <unistd.h>
 
 #define MAX_NOTES	8
  
@@ -39,36 +42,37 @@ void *PlayNote(void *threadid)
 
 int main(void)
 {
-        NeoPixel *n=new NeoPixel(24);
+    Json::Value root;   // 'root' will contain the root value after parsing.
+    NeoPixel *n=new NeoPixel(24);
 
-        while(true) n->effectsDemo();
-        delete n;
+    while(true) n->effectsDemo();
+    delete n;
 
-        return 0;
-        
-	//thread vars
-	pthread_t threads[MAX_NOTES];
-	int rc;
-	int i_thread;
+    return 0;
 
-	mcp3008Spi a2d("/dev/spidev0.0", SPI_MODE_0, 1000000, 8);
-	int i = 20;
-        int a2dVal = 0;         // the real outcome result of the return value after summing all the 3 bytes
-	int a2dChannel = 0;     //the channel that is sampled
-        unsigned char data[3];  //data buffer - used for send&recv
+    //thread vars
+    pthread_t threads[MAX_NOTES];
+    int rc;
+    int i_thread;
+
+    mcp3008Spi a2d("/dev/spidev0.0", SPI_MODE_0, 1000000, 8);
+    int i = 20;
+    int a2dVal = 0;         // the real outcome result of the return value after summing all the 3 bytes
+    int a2dChannel = 0;     //the channel that is sampled
+    unsigned char data[3];  //data buffer - used for send&recv
 /* 
-	for( i_thread=0; i_thread < MAX_NOTES; i_thread++ )
-	{
-		sleep(1);
-		cout << "From Main thread creating thread, " << i_thread << endl;
-      		rc = pthread_create(&threads[i_thread], NULL, 
-                          PlayNote, (void *)i_thread);
-      		if (rc)
-		{
-         		cout << "Error:unable to create thread," << rc << endl;
-         		exit(-1);
-      		}
-   	}
+    for( i_thread=0; i_thread < MAX_NOTES; i_thread++ )
+    {
+            sleep(1);
+            cout << "From Main thread creating thread, " << i_thread << endl;
+            rc = pthread_create(&threads[i_thread], NULL, 
+                      PlayNote, (void *)i_thread);
+            if (rc)
+            {
+                    cout << "Error:unable to create thread," << rc << endl;
+                    exit(-1);
+            }
+    }
 */		
     while(1)
     {
