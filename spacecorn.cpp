@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <time.h>
 #include "ws2812-rpi/ws2812-rpi.h"
+#include "notes.cpp"
 
 #define MAX_NOTES	8
  
