@@ -35,26 +35,34 @@ using namespace std;
  
 void *PlayNote(void *threadid)
 {
-   
    execlp("/usr/bin/omxplayer", " ", "39216__jobro__piano-ff-088.wav", NULL);
    pthread_exit(NULL);
 }
 
 int main(void)
 {
-    Json::Value root;   // 'root' will contain the root value after parsing.
+    std::cout << "Initializing SpaceCorn..." << endl;
+    
+    Json::Value jsnFileNotes;   
+    std::ifstream notes_doc;
+    notes_doc.open("notes.json", ios::in);
+    
+    notes_doc >> jsnFileNotes;/*
+    std::cout << jsnFileNotes;
+    string filename = jsnFileNotes["key001"]["filename"].asString();
+    filename = "../sounds/" + filename;
+    execlp("/usr/bin/omxplayer", " ", filename.c_str(), NULL);
+            */
     NeoPixel *n=new NeoPixel(24);
 
-    while(true) n->effectsDemo();
+    //while(true) n->effectsDemo();
     delete n;
-
-    return 0;
 
     //thread vars
     pthread_t threads[MAX_NOTES];
     int rc;
     int i_thread;
-
+    
     mcp3008Spi a2d("/dev/spidev0.0", SPI_MODE_0, 1000000, 8);
     int i = 20;
     int a2dVal = 0;         // the real outcome result of the return value after summing all the 3 bytes
@@ -73,7 +81,7 @@ int main(void)
                     exit(-1);
             }
     }
-*/		
+		
     while(1)
     {
         a2dChannel  = a2dChannel % 7;    //cyclic reading 0 to 7 = total 8 channels
@@ -94,7 +102,8 @@ int main(void)
             // add to queue to play]
             cout << "The Result is: " << a2dVal << endl;
     }
+ * */
 	//pthread_exit(NULL);
-
+    std::cout << "Exiting SpaceCorn..." << endl;;
     return 0;
 }
