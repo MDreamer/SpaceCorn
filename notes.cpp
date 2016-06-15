@@ -43,8 +43,10 @@ class Note
 	public:
 		//c'tor
 		Note(string _note_name, string _note_path);
+                Note();
 		int setLocation(Note_Location _loc);
-
+                string getNotePath();
+                void setNotePath(string _note_path);
 	private:
 		//the name-value of the note		
 		string note_name;
@@ -55,11 +57,21 @@ class Note
 };
 
 
-
+Note::Note(){}
 Note::Note(string _note_name, string _note_path)
 {
 	note_name = _note_name;
 	note_path = _note_path;
+}
+
+void Note::setNotePath(const string _note_path)
+{
+    note_path = _note_path;
+}
+
+string Note::getNotePath()
+{
+    return note_path;
 }
 
 int Note::setLocation(const Note_Location _loc)
