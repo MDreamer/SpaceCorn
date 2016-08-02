@@ -11,8 +11,11 @@
 #include <sstream>
 #include <algorithm>
 #include <iterator>
+#include <cstdlib>
 #include <iostream>
+#include <stdio.h>
 #include <vector>
+#include "RS-232/rs232.h"
 
 // Just for playing an example file for tryouts:
 // hardcoded path - not fom the txt file
@@ -45,6 +48,39 @@ Mix_Chunk *wave = NULL;
 // Our music file
 //Mix_Music *music = NULL;
 
+int n,
+  cport_nr=22,        /* /dev/ttyS0 (COM1 on windows) */
+  bdrate=9600;       /* 9600 baud */
+
+unsigned char buf[4096];
+
+char mode[]={'8','N','1',0};
+    
+//Write the data to Serial
+void *DataToSerial(void *threadrag)
+{
+    
+    //strcpy(str[0], "5500\n");
+    //strcpy(str[1], "6140\n");
+
+    //int send_d = (int*)threadrag;    
+    int send_d = (int)threadrag;
+    cout << "data thread started sending" << send_d <<endl;
+    
+    char buffer [50];
+    int n=send_d;
+    sprintf (buffer, "%d", n);
+    printf ("[%s] is a to uart\n",buffer);
+    
+    //std::sprintf(str, "%d", *send_d);
+    //std::cout << str;
+    
+    RS232_cputs(cport_nr, buffer);
+    printf("sent: %s\n", buffer);
+    //usleep(1000000);
+    cout << "data thread ended" << endl;
+    //pthread_exit(NULL);
+}
 //Function that plays the wav on its own thread - to be used as the sound player
 void *PlayNote(void *threadid)
 {
@@ -209,6 +245,23 @@ int main(void)
 {
     srand (time(NULL));
     
+    if(RS232_OpenComport(cport_nr, bdrate, mode))
+    {
+        cout << "Can not open comport\n" << endl;
+        return(0);
+    }
+    
+    cout << "open comport opened\n"<<endl;
+    /*
+    pthread_t thread_uart;
+    int m = 500;
+    int rc_uart = pthread_create(&thread_uart, NULL, DataToSerial, (void *)m);
+    if (rc_uart)
+    {
+            cout << "Error:unable to create UART thread," << rc_uart << endl;
+            exit(-1);
+    }
+    */
     char send_data[3] = {0x01,0x80,0x01};
 
     if (loadSDL() == -1)
@@ -284,28 +337,52 @@ int main(void)
                 send_data[1] = 0b10000000 |( ((a2dChannel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
                 send_data[2] = 1; // third byte transmitted....don't care
                 
-                //send the data + HIGH-LOW the relevant pin
-                bcm2835_gpio_write(CSpin[iSPIdev], LOW);
-                bcm2835_spi_transfern(send_data,3);
-                bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
-                //usleep(100);
-                //data[0] first byte of the response - don't care
-                a2dVal = 0;
-                a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
-                a2dVal |=  (send_data[2] & 0xff);
+                if (a2dChannel == 0 && iSPIdev == 2)
+                {
+                    //send the data + HIGH-LOW the relevant pin
+                    bcm2835_gpio_write(CSpin[iSPIdev], LOW);
+                    bcm2835_spi_transfern(send_data,3);
+                    bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
+                    //usleep(100);
+                    //data[0] first byte of the response - don't care
+                    a2dVal = 0;
+                    a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
+                    a2dVal |=  (send_data[2] & 0xff);
+                }
+                else
+                    a2dVal = 0;
+                
                 //cout << (int)send_data[0] << "  " << (int)send_data[1] << "  " << (int)send_data[2] <<endl;
                 //usleep(100);
                 if (a2dVal>piezoThreshold)
                 {
                     // add to queue to play]
-                    usleep(10000);
+                    //usleep(10000);
                     cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
+                    
+                    //prepare the integer to be send as txt
+                    char buffer [5];
+                    //buffer[49] = '#';
+                    //a2dVal=13;
+                    int n=a2dVal % 50;
+                    buffer[0]=0;
+                    buffer[1]=0;
+                    buffer[2]=0;
+                    buffer[3]=0;
+                    buffer[4]=0;
+                    
+                    sprintf (buffer, "%d", n);
+                    printf ("[%s] is a to uart\n",buffer);
+                    ///send through the UART
+                    RS232_cputs(cport_nr, buffer);
+                    printf("sent: %s\n", buffer);
+                    
                     i_thread ++;
                     i_thread = i_thread % (MAX_NOTES-1);
                     to++;
 
                     cout << "starting to play sound thread" << endl;
-                     
+                    
                     rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)i_thread);
                     if (rc)
                     {
@@ -316,10 +393,10 @@ int main(void)
 
                     
                     //"debounce" of 100ms   
-                    //usleep(100000);
+                    usleep(100000);
                 }
             }
-            //usleep(100000);
+            usleep(100);
         }
     }
 

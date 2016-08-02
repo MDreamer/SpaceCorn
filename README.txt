@@ -29,3 +29,6 @@ export LD_RUN_PATH="/home/mdreamer/SpaceCorn/SDL2-2.0.4/build/.libs"
 ALSA lib pcm.c:7843:(snd_pcm_recover) underrun occurred - solution: aconnect -x 
 
 g++ -Wl,-rpath -Wl,LIBDIR -I./SDL2-2.0.4/include/ -I./SDL2_mixer-2.0.1 -L./SDL2-2.0.4/build/.libs -L./SDL2_mixer-2.0.1/build/.libs/ spacecorn.cpp -o ./build/spacecorn -lrt -lpthread `sdl2-config --libs` -lSDL2 -lSDL2_mixer -lbcm2835
+
+g++ -Wl,-rpath -Wl,LIBDIR -I./SDL2-2.0.4/include/ -I./SDL2_mixer-2.0.1 -L./SDL2-2.0.4/build/.libs -L./SDL2_mixer-2.0.1/build/.libs/ spacecorn.cpp ./RS-232/rs232.c -o ./build/spacecorn -lrt -lpthread `sdl2-config --libs` -lSDL2 -lSDL2_mixer -lbcm2835
+
