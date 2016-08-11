@@ -25,16 +25,17 @@
 // A threshold value for the ADC reading in order deal with the SNR
 #define piezoThreshold 50
 
-#define PIN0 RPI_BPLUS_GPIO_J8_03 // pin#2 on my pcb level 0 (I2C1 SDA)
-#define PIN1 RPI_BPLUS_GPIO_J8_05 // pin#5 on my pcb level 1 (I2C1 SCL)
-#define PIN2 RPI_BPLUS_GPIO_J8_07 // pin#7 on my pcb level 2 (GPIO 4)
-#define PIN3 RPI_BPLUS_GPIO_J8_11 // pin#11 on my pcb level 3 (GPIO 17)
-#define PIN4 RPI_BPLUS_GPIO_J8_13 // pin#13 on my pcb level 4 (GPIO 27)
-#define PIN5 RPI_BPLUS_GPIO_J8_15 // pin#15 on my pcb level 5 (GPIO 22)
-#define PIN6 RPI_BPLUS_GPIO_J8_29 // pin#29 on my pcb level 6 (GPIO 5)
-#define PIN7 RPI_BPLUS_GPIO_J8_31 // pin#31 on my pcb level 7 (GPIO 6)
-#define PIN8 RPI_BPLUS_GPIO_J8_33 // pin#33 on my pcb level 8 (GPIO 13)
-#define PIN9 RPI_BPLUS_GPIO_J8_35 // pin#35 on my pcb level 9 (GPIO 19)
+#define PIN0 RPI_BPLUS_GPIO_J8_07 // pin#2 on my pcb level 0 (I2C1 SDA)
+#define PIN1 RPI_BPLUS_GPIO_J8_11 // pin#5 on my pcb level 1 (I2C1 SCL)
+#define PIN2 RPI_BPLUS_GPIO_J8_13// pin#7 on my pcb level 2 (GPIO 4)
+#define PIN3 RPI_BPLUS_GPIO_J8_15 // pin#11 on my pcb level 3 (GPIO 17)
+#define PIN4 RPI_BPLUS_GPIO_J8_29 // pin#13 on my pcb level 4 (GPIO 27)
+#define PIN5 RPI_BPLUS_GPIO_J8_31 // pin#15 on my pcb level 5 (GPIO 22)
+#define PIN6 RPI_BPLUS_GPIO_J8_33 // pin#29 on my pcb level 6 (GPIO 5)
+#define PIN7 RPI_BPLUS_GPIO_J8_35 // pin#31 on my pcb level 7 (GPIO 6)
+#define PIN8 RPI_BPLUS_GPIO_J8_37 // pin#33 on my pcb level 8 (GPIO 13)
+#define PIN9 RPI_BPLUS_GPIO_J8_36 // pin#35 on my pcb level 9 (GPIO 19)
+
 
 using namespace std;
 
@@ -337,20 +338,22 @@ int main(void)
                 send_data[1] = 0b10000000 |( ((a2dChannel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
                 send_data[2] = 1; // third byte transmitted....don't care
                 
-                if (a2dChannel == 0 && iSPIdev == 2)
-                {
+                //if (a2dChannel == 0 && iSPIdev == 3)
+                //{
                     //send the data + HIGH-LOW the relevant pin
                     bcm2835_gpio_write(CSpin[iSPIdev], LOW);
+                    //usleep(1000000);
                     bcm2835_spi_transfern(send_data,3);
                     bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
+                    //usleep(1000000);
                     //usleep(100);
                     //data[0] first byte of the response - don't care
                     a2dVal = 0;
                     a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
                     a2dVal |=  (send_data[2] & 0xff);
-                }
-                else
-                    a2dVal = 0;
+                //}
+                //else
+                //    a2dVal = 0;
                 
                 //cout << (int)send_data[0] << "  " << (int)send_data[1] << "  " << (int)send_data[2] <<endl;
                 //usleep(100);

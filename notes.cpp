@@ -8,7 +8,7 @@
 using namespace std;
 
 #define MAX_NOTES	80
-#define MAX_LEVEL	10
+#define MAX_LEVEL	9
 #define MAX_NUMBER	8
 
 
