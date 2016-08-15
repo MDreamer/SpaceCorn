@@ -1,5 +1,5 @@
-#include "SDL.h"
-#include "SDL_mixer.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include <bcm2835.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -20,7 +20,7 @@
 // Just for playing an example file for tryouts:
 // hardcoded path - not fom the txt file
 #define WAV_PATH "../sounds/39148__jobro__piano-ff-001.wav"
-//#define MUS_PATH "../sounds/39148__jobro__piano-ff-001.wav"
+#define MUS_PATH "../sounds/Wonderland_background.ogg"
 
 // A threshold value for the ADC reading in order deal with the SNR
 #define piezoThreshold 50
@@ -36,6 +36,16 @@
 #define PIN8 RPI_BPLUS_GPIO_J8_37 // pin#33 on my pcb level 8 (GPIO 13)
 #define PIN9 RPI_BPLUS_GPIO_J8_36 // pin#35 on my pcb level 9 (GPIO 19)
 
+//byte 0 - start byte
+//byte 1 - command - addressble LED/UV light
+//byte 2 - data - No# of LED/ UV LED
+//byte 3 - data (TBD) for future use if we'll have time? contol colours?
+//byte 4 - data (TBD)
+//byte 5 - data (TBD)
+//byte 6 - running num seq
+//byte 7 - end byte
+//byte 8 - checksum
+#define MSG_SIZE  9
 
 using namespace std;
 
@@ -47,16 +57,32 @@ Mix_Chunk wavs[MAX_NOTES];
 // Our wave file
 Mix_Chunk *wave = NULL;
 // Our music file
-//Mix_Music *music = NULL;
+Mix_Music *music = NULL;
 
-int n,
+int
   cport_nr=22,        /* /dev/ttyS0 (COM1 on windows) */
   bdrate=9600;       /* 9600 baud */
 
 unsigned char buf[4096];
 
 char mode[]={'8','N','1',0};
-    
+  
+// check sum data check up 
+bool checksum(char payload_check[])
+{
+  char tempChkSum = 0;
+  for (int i = 0; i < (MSG_SIZE - 1); i++) // don't calc the checksum
+  {
+    tempChkSum += payload_check[i];
+  }
+  if (tempChkSum == payload_check[MSG_SIZE - 1] and 
+      payload_check[0] == 115 and //'s' char 
+      payload_check[0] == 116 ) //'t' char 
+    return true;
+  else
+    return false; 
+}
+
 //Write the data to Serial
 void *DataToSerial(void *threadrag)
 {
@@ -101,21 +127,31 @@ void *PlayNote(void *threadid)
 int loadSDL()
 {
     
+    std::cout <<"Loading SDL..."<<endl;
+    
     // Initialize SDL.
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
             std::cout <<"failed init_sdl"<<endl;
             return -1;
     }
-
+    
+    if(Mix_Init(MIX_INIT_MP3) != MIX_INIT_MP3)
+    {
+        std::cout << "cannot Mix_init: "<< Mix_GetError() << endl;
+        //return -1; 
+    }
 
     //Initialize SDL_mixer 
     if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 ) 
     {
         std::cout <<"failed SDL_mixer"<<endl;
         printf("Mix_OpenAudio: %s\n", Mix_GetError());
-            return -1; 
+        return -1; 
+            
     }
+    Mix_Volume(1,MIX_MAX_VOLUME);
+    //while(1);
     Mix_AllocateChannels(24);
 
     // Load our sound effect
@@ -128,10 +164,14 @@ int loadSDL()
 
     // Load our music - temporary disables - maybe will be used later
     // just keeping the code commented for later use..
-    //music = Mix_LoadMUS(MUS_PATH);
-    //if (music == NULL)
-    //        return -1;
-
+    /*
+    music = Mix_LoadMUS(MUS_PATH);
+    if (music == NULL)
+    {
+        std::cout <<"failed load music (MUS_PATH)"<<endl;
+        return -1;
+    }
+*/
     if ( Mix_PlayChannel(-1, wave, 0) == -1 )
     {
         std::cout <<"failed Mix_PlayChannel"<<endl;
@@ -146,7 +186,7 @@ int loadSDL()
     //if ( Mix_PlayMusic( music, -1) == -1 )
     //        return -1;
 
-    //while ( Mix_PlayingMusic(-1) ) ;
+    //while ( Mix_PlayingMusic() ) ;
 }
 
 /* starts the SPI interface module, also configures the GPIO pins that will allow
@@ -246,13 +286,22 @@ int main(void)
 {
     srand (time(NULL));
     
+    std::cout << "Initializing SpaceCorn..." << endl;
+    //sound "test" not using SDL
+    /*
+    system("killall omxplayer.bin"); //making sure no other sound is runnning
+    
+    system("omxplayer ../sounds/Wonderland_background.mp3");
+    
+    //while(1);
+    */
     if(RS232_OpenComport(cport_nr, bdrate, mode))
     {
-        cout << "Can not open comport\n" << endl;
+        cout << "Can not open comport..." << endl;
         return(0);
     }
     
-    cout << "open comport opened\n"<<endl;
+    cout << "open comport opened..."<<endl;
     /*
     pthread_t thread_uart;
     int m = 500;
@@ -263,6 +312,9 @@ int main(void)
             exit(-1);
     }
     */
+    
+ 
+    
     char send_data[3] = {0x01,0x80,0x01};
 
     if (loadSDL() == -1)
@@ -273,8 +325,10 @@ int main(void)
 
     if (startSPI() == -1)
         return -1;
-    system("killall omxplayer.bin"); //making sure no other sound is runnning
-    std::cout << "Initializing SpaceCorn..." << endl;
+    
+    
+    
+    
 
     //thread vars
     pthread_t threads[MAX_NOTES];
@@ -364,21 +418,45 @@ int main(void)
                     cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
                     
                     //prepare the integer to be send as txt
-                    char buffer [5];
-                    //buffer[49] = '#';
+                    char buffer [MSG_SIZE];
+                    //byte 0 - start byte
+                    //byte 1 - command - addressble LED/UV light
+                    //byte 2 - data - No# of LED/ UV LED
+                    //byte 3 - data (TBD) for future use if we'll have time? contol colours?
+                    //byte 4 - data (TBD)
+                    //byte 5 - data (TBD)
+                    //byte 6 - running num seq
+                    //byte 7 - end byte
+                    //byte 8 - checksum
+                    
                     //a2dVal=13;
-                    int n=a2dVal % 50;
-                    buffer[0]=0;
-                    buffer[1]=0;
+                    int n=a2dVal % 24;
+                    buffer[0]=115;
+                    buffer[1]=50;
                     buffer[2]=0;
                     buffer[3]=0;
                     buffer[4]=0;
+                    buffer[5]=0;
+                    buffer[6]=0;
+                    buffer[7]=114;
+                    buffer[8]=0;
                     
-                    sprintf (buffer, "%d", n);
-                    printf ("[%s] is a to uart\n",buffer);
+                    buffer[2] = (char)n;
+                    //for (int i;i < MSG_SIZE-1;i++)
+                    //    buffer[MSG_SIZE-1] += buffer[i];
+                    buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
+                             buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
+                            buffer[6] + buffer[7];
+                    cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
+                         << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
+                         << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
+                         << (int)buffer[5] << ", " << (int)buffer[7] << ", " 
+                         << (int)buffer[8] << endl;
+                    //sprintf (buffer, "%d", n);
+                    //printf ("[%s] is a to uart\n",buffer);
                     ///send through the UART
                     RS232_cputs(cport_nr, buffer);
-                    printf("sent: %s\n", buffer);
+                    //printf("sent: %s\n", buffer);
                     
                     i_thread ++;
                     i_thread = i_thread % (MAX_NOTES-1);
