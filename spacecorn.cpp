@@ -16,60 +16,9 @@
 #include <stdio.h>
 #include <vector>
 #include "RS-232/rs232.h"
+#include "config.h"
 
-// Just for playing an example file for tryouts:
-// hardcoded path - not fom the txt file
-#define WAV_PATH "../sounds/39148__jobro__piano-ff-001.wav"
-#define MUS_PATH "../sounds/Wonderland_background.ogg"
-
-// A threshold value for the ADC reading in order deal with the SNR
-#define piezoThreshold 50
-
-#define PIN0 RPI_BPLUS_GPIO_J8_07 // pin#07 on SC pcb level 0 (GPIO 4)
-#define PIN1 RPI_BPLUS_GPIO_J8_11 // pin#11 on SC pcb level 1 (GPIO ??)
-#define PIN2 RPI_BPLUS_GPIO_J8_13 // pin#13 on SC pcb level 2 (GPIO ??)
-#define PIN3 RPI_BPLUS_GPIO_J8_15 // pin#15 on SC pcb level 3 (GPIO ??)
-#define PIN4 RPI_BPLUS_GPIO_J8_29 // pin#29 on SC pcb level 4 (GPIO ??)
-#define PIN5 RPI_BPLUS_GPIO_J8_31 // pin#31 on SC pcb level 5 (GPIO ??)
-#define PIN6 RPI_BPLUS_GPIO_J8_33 // pin#33 on SC pcb level 6 (GPIO ??)
-#define PIN7 RPI_BPLUS_GPIO_J8_35 // pin#35 on SC pcb level 7 (GPIO ??)
-#define PIN8 RPI_BPLUS_GPIO_J8_37 // pin#37 on SC pcb level 8 (GPIO ??)
-#define PIN9 RPI_BPLUS_GPIO_J8_36 // pin#36 on SC pcb level 9 (GPIO ??)
-
-//for debug mode
-#define debug true
-
-//for vocal alerts
-#define vocal false
-
-#define SC_START_PATH "../sounds/Boot/spacecorn_init.mp3"
-#define LED_START_PATH "../sounds/Boot/spacecorn_light.mp3"
-#define SOUNDS_START_PATH "../sounds/Boot/spacecorn_sound.mp3"
-#define COMM_TEST_PATH "../sounds/Boot/spacecorn_driver_test.mp3"
-#define COMM_ACK_PATH "../sounds/Boot/spacecorn_ack.mp3"
-#define SYS_TEST_PATH "../sounds/Boot/spacecorn_system_test.mp3"
-#define SC_SHUTDOWN_PATH "../sounds/Boot/spacecorn_shutdown_received.mp3"
-#define LED_END_PATH "../sounds/Boot/spacecord_led_deactivate.mp3"
-#define SOUND_END_PATH "../sounds/Boot/spacecord_sound_deactivate.mp3"
-#define SC_END_PATH "../sounds/Boot/spacecorn_shutdown.mp3"
-
-
-//byte 0 - start byte
-//byte 1 - command - addressble LED/UV light
-//byte 2 - data - No# of LED/ UV LED
-//byte 3 - data (TBD) for future use if we'll have time? contol colours?
-//byte 4 - data (TBD)
-//byte 5 - data (TBD)
-//byte 6 - running num seq
-//byte 7 - end byte
-//byte 8 - checksum
-#define MSG_SIZE  9
-
-using namespace std;
-
-const int CSpin[MAX_LEVEL] = {
-    PIN0, PIN1, PIN2, PIN3, PIN4, PIN5, PIN6, PIN7, PIN8, PIN9
-};
+Note notes_list[MAX_LEVEL][MAX_RING];
  
 Mix_Chunk wavs[MAX_NOTES];
 // Our wave file
@@ -238,8 +187,11 @@ int loadNotesFile()
     //prompt to user
     cout << "reading notes.txt"  << endl;
 
-    Note notes_list[MAX_NOTES];
+    
     int iNotes=0;
+    
+    int iLevelCounter = 0;
+    int iRingCounter = 0;
     infile.open ("notes.txt");
     Note_Location temp_location;
     while (!infile.eof())
@@ -249,7 +201,7 @@ int loadNotesFile()
         istringstream iss(STRING);
         vector<string> tokens;
         copy(istream_iterator<string>(iss), istream_iterator<string>(), back_inserter(tokens));
-        notes_list[iNotes].setNotePath("../sounds/" + tokens[0]);
+        notes_list[iLevelCounter][iRingCounter].setNotePath("../sounds/" + tokens[0]);
 
         
         istringstream convert(tokens[1]);
@@ -260,19 +212,23 @@ int loadNotesFile()
         if ( !(convert2 >> temp_location.Number) ) //give the value to 'Result' using the characters in the stream
             temp_location.Number = -1;             //if that fails set 'Result' to 0
 
-        notes_list[iNotes].setLocation(temp_location);
-        cout << notes_list[iNotes].getNotePath() << " " << temp_location.Level << " " << temp_location.Number << endl;
+        notes_list[iLevelCounter][iRingCounter].setLocation(temp_location);
+        cout << notes_list[iLevelCounter][iRingCounter].getNotePath() << " " << temp_location.Level << " " << temp_location.Number << endl;
 
         // Load our sound effect
-        wave = Mix_LoadWAV(notes_list[iNotes].getNotePath().c_str());
+        wave = Mix_LoadWAV(notes_list[iLevelCounter][iRingCounter].getNotePath().c_str());
         if (wave == NULL)
         {
-            std::cout <<"failed load sound "<< notes_list[iNotes].getNotePath() << endl;
+            std::cout <<"failed load sound "<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
             return -1;
         }
         //sets the new wav sound file the the notes sound array
         wavs[iNotes] = *wave;
         iNotes++;
+        iLevelCounter++;
+        iLevelCounter = iLevelCounter % MAX_LEVEL;
+        iRingCounter++;
+        iRingCounter = iRingCounter % MAX_RING;
         // if case that the file contains more note that bottles
         if (iNotes >= MAX_NOTES)
         {
@@ -373,7 +329,7 @@ int main(void)
         for (iSPIdev = 0; iSPIdev < MAX_LEVEL; iSPIdev++)
         {
             //cyclic reading 0 to 7 = total 8 channels
-            for (a2dChannel = 0; a2dChannel < MAX_NUMBER; a2dChannel++)
+            for (a2dChannel = 0; a2dChannel < MAX_RING; a2dChannel++)
             {
                 //prepare the datagram for sending
                 send_data[0] = 1;  //  first byte transmitted -> start bit

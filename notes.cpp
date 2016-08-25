@@ -4,34 +4,11 @@
 #include <fstream>
 #include <vector>
 #include <sys/time.h>
+#include "config.h"
 
 using namespace std;
 
-#define MAX_NOTES	80
-#define MAX_LEVEL	10
-#define MAX_NUMBER	8
 
-
-//the location of the note on the tree
-//the location is Level and number based. The Levels are being counted from the buttom up - starting form "0"
-//anf the nubmer is the number of the bottle/note clockwise according to the numbers on the Level. 
-//There are 8 (0-7) Numbers/Notes in each Level
-//
-//			0
-//			|	
-//
-//              7               1
-//		\		/
-//
-//	6				2
-// 	-                               -
-//			
-//              5               3
-// 		/		\
-//
-// 			4
-//                      |
-//
 struct Note_Location
 {
 	int Level;
@@ -49,6 +26,7 @@ class Note
                 void setNotePath(string _note_path);
                 void setTimeStamp();
                 long int getTimeStamp();
+                bool canPlay();
 	private:
 		//the name-value of the note		
 		string note_name;
@@ -96,14 +74,24 @@ int Note::setLocation(const Note_Location _loc)
 {
 	// if ther desired location of the note is bigger/smaller than the
 	// when something is wrong...
-	if (_loc.Level < 0 || _loc.Level > MAX_LEVEL-1 || _loc.Number < 0 || _loc.Number > MAX_NUMBER-1)
+	if (_loc.Level < 0 || _loc.Level > MAX_LEVEL-1 || _loc.Number < 0 || _loc.Number > MAX_RING-1)
 		return 0;
 	else
 		note_loc = _loc;
 
 	return 1;
 }
-
+bool Note::canPlay()
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long int temp_ms = tp.tv_sec * 1000 + tp.tv_usec / 1000; //get current timestamp in milliseconds
+    // if it has been over 100ms sence the last hit
+    if (abs(Note::getTimeStamp() - temp_ms) > 100)
+        return true;
+    else
+        return false;
+}
 void *PlayNote(Note note_to_play)
 {
 	//TODO: before each play - check if the note has been played during 
