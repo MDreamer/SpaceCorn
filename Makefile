@@ -9,7 +9,7 @@ build_corn:
 	
 	rsync -rtvz /media/mdreamer/workspace/SpaceCorn pi@raspberrypi:~/
 	#rsync -rtvz /media/mdreamer/workspace/SpaceCorn pi@169.254.41.1:~/
-	#rsync -rtvz /media/mdreamer/workspace/SpaceCorn pi@192.168.199.88:~/
+	#rsync -rtvz /media/mdreamer/workspace/SpaceCorn pi@192.168.199.89:~/
 
 clean :
 	rm ./build/*

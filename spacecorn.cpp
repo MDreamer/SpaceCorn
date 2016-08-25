@@ -25,16 +25,34 @@
 // A threshold value for the ADC reading in order deal with the SNR
 #define piezoThreshold 50
 
-#define PIN0 RPI_BPLUS_GPIO_J8_07 // pin#2 on my pcb level 0 (I2C1 SDA)
-#define PIN1 RPI_BPLUS_GPIO_J8_11 // pin#5 on my pcb level 1 (I2C1 SCL)
-#define PIN2 RPI_BPLUS_GPIO_J8_13// pin#7 on my pcb level 2 (GPIO 4)
-#define PIN3 RPI_BPLUS_GPIO_J8_15 // pin#11 on my pcb level 3 (GPIO 17)
-#define PIN4 RPI_BPLUS_GPIO_J8_29 // pin#13 on my pcb level 4 (GPIO 27)
-#define PIN5 RPI_BPLUS_GPIO_J8_31 // pin#15 on my pcb level 5 (GPIO 22)
-#define PIN6 RPI_BPLUS_GPIO_J8_33 // pin#29 on my pcb level 6 (GPIO 5)
-#define PIN7 RPI_BPLUS_GPIO_J8_35 // pin#31 on my pcb level 7 (GPIO 6)
-#define PIN8 RPI_BPLUS_GPIO_J8_37 // pin#33 on my pcb level 8 (GPIO 13)
-#define PIN9 RPI_BPLUS_GPIO_J8_36 // pin#35 on my pcb level 9 (GPIO 19)
+#define PIN0 RPI_BPLUS_GPIO_J8_07 // pin#07 on SC pcb level 0 (GPIO 4)
+#define PIN1 RPI_BPLUS_GPIO_J8_11 // pin#11 on SC pcb level 1 (GPIO ??)
+#define PIN2 RPI_BPLUS_GPIO_J8_13 // pin#13 on SC pcb level 2 (GPIO ??)
+#define PIN3 RPI_BPLUS_GPIO_J8_15 // pin#15 on SC pcb level 3 (GPIO ??)
+#define PIN4 RPI_BPLUS_GPIO_J8_29 // pin#29 on SC pcb level 4 (GPIO ??)
+#define PIN5 RPI_BPLUS_GPIO_J8_31 // pin#31 on SC pcb level 5 (GPIO ??)
+#define PIN6 RPI_BPLUS_GPIO_J8_33 // pin#33 on SC pcb level 6 (GPIO ??)
+#define PIN7 RPI_BPLUS_GPIO_J8_35 // pin#35 on SC pcb level 7 (GPIO ??)
+#define PIN8 RPI_BPLUS_GPIO_J8_37 // pin#37 on SC pcb level 8 (GPIO ??)
+#define PIN9 RPI_BPLUS_GPIO_J8_36 // pin#36 on SC pcb level 9 (GPIO ??)
+
+//for debug mode
+#define debug true
+
+//for vocal alerts
+#define vocal false
+
+#define SC_START_PATH "../sounds/Boot/spacecorn_init.mp3"
+#define LED_START_PATH "../sounds/Boot/spacecorn_light.mp3"
+#define SOUNDS_START_PATH "../sounds/Boot/spacecorn_sound.mp3"
+#define COMM_TEST_PATH "../sounds/Boot/spacecorn_driver_test.mp3"
+#define COMM_ACK_PATH "../sounds/Boot/spacecorn_ack.mp3"
+#define SYS_TEST_PATH "../sounds/Boot/spacecorn_system_test.mp3"
+#define SC_SHUTDOWN_PATH "../sounds/Boot/spacecorn_shutdown_received.mp3"
+#define LED_END_PATH "../sounds/Boot/spacecord_led_deactivate.mp3"
+#define SOUND_END_PATH "../sounds/Boot/spacecord_sound_deactivate.mp3"
+#define SC_END_PATH "../sounds/Boot/spacecorn_shutdown.mp3"
+
 
 //byte 0 - start byte
 //byte 1 - command - addressble LED/UV light
@@ -68,28 +86,17 @@ unsigned char buf[4096];
 char mode[]={'8','N','1',0};
   
 // check sum data check up 
-bool checksum(char payload_check[])
+void calc_checksum(char payload_check[])
 {
-  char tempChkSum = 0;
-  for (int i = 0; i < (MSG_SIZE - 1); i++) // don't calc the checksum
+  for (int i = 0; i < (MSG_SIZE - 1); i++) // don't calc the checksum itself
   {
-    tempChkSum += payload_check[i];
-  }
-  if (tempChkSum == payload_check[MSG_SIZE - 1] and 
-      payload_check[0] == 115 and //'s' char 
-      payload_check[0] == 116 ) //'t' char 
-    return true;
-  else
-    return false; 
+    payload_check[MSG_SIZE - 1] += payload_check[i];
+  }   
 }
 
 //Write the data to Serial
 void *DataToSerial(void *threadrag)
 {
-    
-    //strcpy(str[0], "5500\n");
-    //strcpy(str[1], "6140\n");
-
     //int send_d = (int*)threadrag;    
     int send_d = (int)threadrag;
     cout << "data thread started sending" << send_d <<endl;
@@ -120,6 +127,8 @@ void *PlayNote(void *threadid)
     }
    //let it finish playing
    while ( Mix_Playing(ret_ch) ) ;
+   // free the resource?
+   //Mix_FreeChunk(wave);
    pthread_exit(NULL);
 }
 
@@ -206,15 +215,8 @@ int startSPI()
         bcm2835_gpio_fsel(CSpin[i], BCM2835_GPIO_FSEL_OUTP);
         bcm2835_gpio_write(CSpin[i], HIGH);
     }
-    /*
-    bcm2835_gpio_fsel(PIN0, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(PIN1, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(PIN2, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_write(PIN0, HIGH);
-    bcm2835_gpio_write(PIN1, HIGH);
-    bcm2835_gpio_write(PIN2, HIGH);
-    */
-    // start the SPI
+    
+    // start/init the SPI
     bcm2835_spi_begin();
     bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);      
     bcm2835_spi_setDataMode(BCM2835_SPI_MODE0); //Data comes in on falling edge
@@ -302,18 +304,7 @@ int main(void)
     }
     
     cout << "open comport opened..."<<endl;
-    /*
-    pthread_t thread_uart;
-    int m = 500;
-    int rc_uart = pthread_create(&thread_uart, NULL, DataToSerial, (void *)m);
-    if (rc_uart)
-    {
-            cout << "Error:unable to create UART thread," << rc_uart << endl;
-            exit(-1);
-    }
-    */
     
- 
     
     char send_data[3] = {0x01,0x80,0x01};
 
@@ -325,10 +316,6 @@ int main(void)
 
     if (startSPI() == -1)
         return -1;
-    
-    
-    
-    
 
     //thread vars
     pthread_t threads[MAX_NOTES];
@@ -371,14 +358,15 @@ int main(void)
     //i_thread++;
     //pthread_exit(NULL);
     int iSPIdev=0; //from SPI0 to 9 = 10 devices
-    int to=0;
+    
     /* The cyclic logic sampling:
      * Cycle through all the bottles/piezo sensors and sample them. 
      * Stores the ADC in an array to be decided if it should be played - threshold 
      * dependent(can be configured/changed). 
-     * 
-     * 
      */
+    char seqCounter; //just a running number to keep the checksum changing
+                     //even if all the other data byte are remaining the same
+                     //this char var will overflow-cycle from 255 -> 0 if incremented
     while (1)
     {
         //cyclic reading 0 to 9 = total 10 SPI devices/slaves
@@ -392,61 +380,63 @@ int main(void)
                 send_data[1] = 0b10000000 |( ((a2dChannel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
                 send_data[2] = 1; // third byte transmitted....don't care
                 
+                //just for checking a specific SPIdev/channel
                 //if (a2dChannel == 0 && iSPIdev == 3)
                 //{
-                    //send the data + HIGH-LOW the relevant pin
-                    bcm2835_gpio_write(CSpin[iSPIdev], LOW);
-                    //usleep(1000000);
-                    bcm2835_spi_transfern(send_data,3);
-                    bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
-                    //usleep(1000000);
-                    //usleep(100);
-                    //data[0] first byte of the response - don't care
-                    a2dVal = 0;
-                    a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
-                    a2dVal |=  (send_data[2] & 0xff);
+                //send the data + HIGH-LOW the relevant pin
+                bcm2835_gpio_write(CSpin[iSPIdev], LOW);
+                //usleep(1000000);
+                bcm2835_spi_transfern(send_data,3);
+                bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
+                //usleep(1000000);
+                //usleep(100);
+                //data[0] first byte of the response - don't care
+                a2dVal = 0;
+                a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
+                a2dVal |=  (send_data[2] & 0xff);
                 //}
                 //else
-                //    a2dVal = 0;
+                //a2dVal = 100;
                 
                 //cout << (int)send_data[0] << "  " << (int)send_data[1] << "  " << (int)send_data[2] <<endl;
-                //usleep(100);
+                //usleep(100000);
+                // maybe create a moving average per sensor?
                 if (a2dVal>piezoThreshold)
                 {
                     // add to queue to play]
                     //usleep(10000);
                     cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
                     
-                    //prepare the integer to be send as txt
-                    char buffer [MSG_SIZE];
+                    
+                    char buffer [MSG_SIZE]; //payload
                     //byte 0 - start byte
-                    //byte 1 - command - addressble LED/UV light
+                    //byte 1 - command - addressble LED = 50 / UV light = 60
                     //byte 2 - data - No# of LED/ UV LED
-                    //byte 3 - data (TBD) for future use if we'll have time? contol colours?
+                    //byte 3 - data (TBD) for future use if we'll have time? control colours?
                     //byte 4 - data (TBD)
                     //byte 5 - data (TBD)
                     //byte 6 - running num seq
                     //byte 7 - end byte
                     //byte 8 - checksum
                     
-                    //a2dVal=13;
-                    int n=a2dVal % 24;
-                    buffer[0]=115;
-                    buffer[1]=50;
-                    buffer[2]=0;
-                    buffer[3]=0;
-                    buffer[4]=0;
-                    buffer[5]=0;
-                    buffer[6]=0;
-                    buffer[7]=114;
-                    buffer[8]=0;
+                    // The sensor's number being triggered. Each level is contains 
+                    // 8 sensors per SPI device
+                    int senNum = (iSPIdev*10) + a2dChannel; 
                     
-                    buffer[2] = (char)n;
-                    //for (int i;i < MSG_SIZE-1;i++)
-                    //    buffer[MSG_SIZE-1] += buffer[i];
+                    buffer[0] = 115;  // Start byte = 's'
+                    buffer[1] = 50;
+                    buffer[2] = (char)senNum;
+                    buffer[3] = 0;    // TBD R / UV settings
+                    buffer[4] = 0;    // TBD G / UV settings
+                    buffer[5] = 0;    // TBD B / UV settings
+                    buffer[6] = seqCounter;
+                    buffer[7] = 114;  // End byte = 'r'
+                    buffer[8] = 0;    // Payload checksum
+                    
+                    // TDOD: turn this into a function...
                     buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
-                             buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
-                            buffer[6] + buffer[7];
+                        buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
+                        buffer[6] + buffer[7];
                     cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
                          << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
                          << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
@@ -454,13 +444,16 @@ int main(void)
                          << (int)buffer[8] << endl;
                     //sprintf (buffer, "%d", n);
                     //printf ("[%s] is a to uart\n",buffer);
+                    
+                    //TODO: is it causing any delay regarding sampling? 
+                    // maybe create a mutex thread?
                     ///send through the UART
                     RS232_cputs(cport_nr, buffer);
+                    seqCounter++; //increase sequence counter by 1 every transmission
                     //printf("sent: %s\n", buffer);
                     
                     i_thread ++;
                     i_thread = i_thread % (MAX_NOTES-1);
-                    to++;
 
                     cout << "starting to play sound thread" << endl;
                     
@@ -468,13 +461,13 @@ int main(void)
                     if (rc)
                     {
                             cout << "Error:unable to create thread," << rc << endl;
-                            exit(-1);
+                            exit(-1);   //TODO: Why does it happen?
                     }
                     
 
                     
                     //"debounce" of 100ms   
-                    usleep(100000);
+                    //usleep(100000);
                 }
             }
             usleep(100);

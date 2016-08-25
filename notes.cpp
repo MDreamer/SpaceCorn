@@ -3,7 +3,7 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
-
+#include <sys/time.h>
 
 using namespace std;
 
@@ -47,6 +47,8 @@ class Note
 		int setLocation(Note_Location _loc);
                 string getNotePath();
                 void setNotePath(string _note_path);
+                void setTimeStamp();
+                long int getTimeStamp();
 	private:
 		//the name-value of the note		
 		string note_name;
@@ -54,6 +56,13 @@ class Note
 		string note_path;
 		//location of the note on the tree
 		Note_Location note_loc;
+                // sound debouncing:
+                // state the last time it was played/sampled after playing 
+                // in ms when it is = 0 it means that its ready to be played
+                // if its between 0 to 100ms it cannot be played and will
+                // wait till the next check to be set. When it will go over 100ms
+                // it will be set to 0 to indicate it is ready to be played
+                long int lastPlayed_ms = 0;
 };
 
 
@@ -73,7 +82,16 @@ string Note::getNotePath()
 {
     return note_path;
 }
-
+void Note::setTimeStamp()
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    lastPlayed_ms = tp.tv_sec * 1000 + tp.tv_usec / 1000; //get current timestamp in milliseconds
+}
+long int Note::getTimeStamp()
+{
+    return lastPlayed_ms;
+}
 int Note::setLocation(const Note_Location _loc)
 {
 	// if ther desired location of the note is bigger/smaller than the
@@ -88,6 +106,7 @@ int Note::setLocation(const Note_Location _loc)
 
 void *PlayNote(Note note_to_play)
 {
-	
+	//TODO: before each play - check if the note has been played during 
+        //the last  debounce_threshold ms
 	return NULL;
 }
