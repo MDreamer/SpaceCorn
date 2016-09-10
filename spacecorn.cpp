@@ -65,19 +65,26 @@ void *DataToSerial(void *threadrag)
     //pthread_exit(NULL);
 }
 //Function that plays the wav on its own thread - to be used as the sound player
-void *PlayNote(void *threadid)
+void *PlayNote(void *play_note_idx)
 {
-   
-   cout << "playing sound in thread" << endl;
-   int ret_ch = Mix_PlayChannel(-1, &wavs[(rand() % 68)], 0);
-   if ( ret_ch == -1 )
-    {
-        std::cout <<"failed Mix_PlayChannel"<<endl;
-    }
-   //let it finish playing
-   while ( Mix_Playing(ret_ch) ) ;
-   // free the resource?
-   //Mix_FreeChunk(wave);
+   long wav_num;
+   wav_num = (long)play_note_idx;
+   if (wav_num < MAX_NOTES)
+   {
+        cout << "playing sound number "<< wav_num << "in thread" << endl;
+        int ret_ch = Mix_PlayChannel(-1, &wavs[wav_num], 0);
+        if ( ret_ch == -1 )
+         {
+             std::cout <<"failed Mix_PlayChannel"<<endl;
+         }
+        //let it finish playing
+        while ( Mix_Playing(ret_ch) ) ;
+   }
+   else 
+       if (debug)
+           cout << "From thread note player: the note number exceed the MAX_NOTES" << endl;
+    // free the resource?
+    //Mix_FreeChunk(wave);
    pthread_exit(NULL);
 }
 
@@ -217,6 +224,9 @@ int loadNotesFile()
 
         // Load our sound effect
         wave = Mix_LoadWAV(notes_list[iLevelCounter][iRingCounter].getNotePath().c_str());
+        //after the path had been set load the actual file to memory
+        //notes_list[iLevelCounter][iRingCounter].setNoteSound();
+                
         if (wave == NULL)
         {
             std::cout <<"failed load sound "<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
@@ -246,13 +256,16 @@ int main(void)
     
     std::cout << "Initializing SpaceCorn..." << endl;
     //sound "test" not using SDL
-    /*
+    
     system("killall omxplayer.bin"); //making sure no other sound is runnning
     
-    system("omxplayer ../sounds/Wonderland_background.mp3");
+    system("omxplayer ../sounds/Boot/spacecorn_init.mp3");
+    
+    //wait 3 sec to finish play the mp3 file
+    usleep(5000000);
     
     //while(1);
-    */
+    
     if(RS232_OpenComport(cport_nr, bdrate, mode))
     {
         cout << "Can not open comport..." << endl;
@@ -323,8 +336,20 @@ int main(void)
     char seqCounter; //just a running number to keep the checksum changing
                      //even if all the other data byte are remaining the same
                      //this char var will overflow-cycle from 255 -> 0 if incremented
+    int tempi;
     while (1)
     {
+        //to be used later to check that the SW doesn't crash due to mem leaks
+        /*
+        rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)tempi);
+        tempi = (tempi+1)%80;
+        usleep(2000000);
+        if (rc)
+        {
+                cout << "Error:unable to create thread," << rc << endl;
+                exit(-1);   //TODO: Why does it happen?
+        }
+        */
         //cyclic reading 0 to 9 = total 10 SPI devices/slaves
         for (iSPIdev = 0; iSPIdev < MAX_LEVEL; iSPIdev++)
         {
@@ -412,8 +437,9 @@ int main(void)
                     i_thread = i_thread % (MAX_NOTES-1);
 
                     cout << "starting to play sound thread" << endl;
-                    
-                    rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)i_thread);
+                    int note_num_play = iSPIdev * 8 + a2dChannel;
+                            
+                    rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)note_num_play);
                     if (rc)
                     {
                             cout << "Error:unable to create thread," << rc << endl;

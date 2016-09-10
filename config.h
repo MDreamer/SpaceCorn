@@ -43,7 +43,7 @@ extern "C" {
 #define MUS_PATH "../sounds/Wonderland_background.ogg"
 
 // A threshold value for the ADC reading in order deal with the SNR
-#define piezoThreshold 50
+#define piezoThreshold 20
 
 #define PIN0 RPI_BPLUS_GPIO_J8_07 // pin#07 on SC pcb level 0 (GPIO 4)
 #define PIN1 RPI_BPLUS_GPIO_J8_11 // pin#11 on SC pcb level 1 (GPIO ??)
