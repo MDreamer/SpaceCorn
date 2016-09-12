@@ -48,7 +48,8 @@ void *DataToSerial(void *threadrag)
 {
     //int send_d = (int*)threadrag;    
     int send_d = (int)threadrag;
-    cout << "data thread started sending" << send_d <<endl;
+    if (debug)
+        cout << "data thread started sending" << send_d <<endl;
     
     char buffer [50];
     int n=send_d;
@@ -61,7 +62,8 @@ void *DataToSerial(void *threadrag)
     RS232_cputs(cport_nr, buffer);
     printf("sent: %s\n", buffer);
     //usleep(1000000);
-    cout << "data thread ended" << endl;
+    if (debug)
+        cout << "data thread ended" << endl;
     //pthread_exit(NULL);
 }
 //Function that plays the wav on its own thread - to be used as the sound player
@@ -71,11 +73,13 @@ void *PlayNote(void *play_note_idx)
    wav_num = (long)play_note_idx;
    if (wav_num < MAX_NOTES)
    {
-        cout << "playing sound number "<< wav_num << "in thread" << endl;
+        if (debug)
+            cout << "playing sound number "<< wav_num << "in thread" << endl;
         int ret_ch = Mix_PlayChannel(-1, &wavs[wav_num], 0);
         if ( ret_ch == -1 )
          {
-             std::cout <<"failed Mix_PlayChannel"<<endl;
+            if (debug)
+                std::cout <<"failed Mix_PlayChannel"<<endl;
          }
         //let it finish playing
         while ( Mix_Playing(ret_ch) ) ;
@@ -91,27 +95,31 @@ void *PlayNote(void *play_note_idx)
 //loads and config the SDL sound module - as of now without background music
 int loadSDL()
 {
-    
-    std::cout <<"Loading SDL..."<<endl;
+    if (debug)
+        std::cout <<"Loading SDL..."<<endl;
     
     // Initialize SDL.
     if (SDL_Init(SDL_INIT_AUDIO) < 0)
     {
+        if (debug)
             std::cout <<"failed init_sdl"<<endl;
-            return -1;
+        return -1;
     }
     
     if(Mix_Init(MIX_INIT_MP3) != MIX_INIT_MP3)
     {
-        std::cout << "cannot Mix_init: "<< Mix_GetError() << endl;
+        if (debug)
+            std::cout << "cannot Mix_init: "<< Mix_GetError() << endl;
         //return -1; 
     }
 
     //Initialize SDL_mixer 
     if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 ) 
     {
-        std::cout <<"failed SDL_mixer"<<endl;
-        printf("Mix_OpenAudio: %s\n", Mix_GetError());
+        if (debug)
+            std::cout <<"failed SDL_mixer"<<endl;
+        if (debug)
+            printf("Mix_OpenAudio: %s\n", Mix_GetError());
         return -1; 
             
     }
@@ -123,7 +131,8 @@ int loadSDL()
     wave = Mix_LoadWAV(WAV_PATH);
     if (wave == NULL)
     {
-        std::cout <<"failed load sound"<<endl;
+        if (debug)
+            std::cout <<"failed load sound"<<endl;
         return -1;
     }
 
@@ -139,7 +148,8 @@ int loadSDL()
 */
     if ( Mix_PlayChannel(-1, wave, 0) == -1 )
     {
-        std::cout <<"failed Mix_PlayChannel"<<endl;
+        if (debug)
+            std::cout <<"failed Mix_PlayChannel"<<endl;
         return -1;
     }
 
@@ -192,7 +202,8 @@ int loadNotesFile()
     ifstream infile; //file handler
 
     //prompt to user
-    cout << "reading notes.txt"  << endl;
+    if (debug)
+        cout << "reading notes.txt"  << endl;
 
     
     int iNotes=0;
@@ -220,7 +231,8 @@ int loadNotesFile()
             temp_location.Number = -1;             //if that fails set 'Result' to 0
 
         notes_list[iLevelCounter][iRingCounter].setLocation(temp_location);
-        cout << notes_list[iLevelCounter][iRingCounter].getNotePath() << " " << temp_location.Level << " " << temp_location.Number << endl;
+        if (debug)
+            cout << notes_list[iLevelCounter][iRingCounter].getNotePath() << " " << temp_location.Level << " " << temp_location.Number << endl;
 
         // Load our sound effect
         wave = Mix_LoadWAV(notes_list[iLevelCounter][iRingCounter].getNotePath().c_str());
@@ -229,7 +241,8 @@ int loadNotesFile()
                 
         if (wave == NULL)
         {
-            std::cout <<"failed load sound "<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
+            if (debug)
+                std::cout <<"failed load sound "<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
             return -1;
         }
         //sets the new wav sound file the the notes sound array
@@ -240,9 +253,10 @@ int loadNotesFile()
         iRingCounter++;
         iRingCounter = iRingCounter % MAX_RING;
         // if case that the file contains more note that bottles
-        if (iNotes >= MAX_NOTES)
+        if (iNotes > MAX_NOTES)
         {
-            std::cout << "too many notes in file... exiting" << endl;
+            if (debug)
+                std::cout << "too many notes in file... exiting" << endl;
             return -1;
         }
     }
@@ -253,8 +267,8 @@ int loadNotesFile()
 int main(void)
 {
     srand (time(NULL));
-    
-    std::cout << "Initializing SpaceCorn..." << endl;
+    if (debug)
+        std::cout << "Initializing SpaceCorn..." << endl;
     //sound "test" not using SDL
     
     //system("killall omxplayer.bin"); //making sure no other sound is runnning
@@ -268,11 +282,12 @@ int main(void)
     
     if(RS232_OpenComport(cport_nr, bdrate, mode))
     {
-        cout << "Can not open comport..." << endl;
+        if (debug)
+            cout << "Can not open comport..." << endl;
         return(0);
     }
-    
-    cout << "open comport opened..."<<endl;
+    if (debug)
+        cout << "open comport opened..."<<endl;
     
     
     char send_data[3] = {0x01,0x80,0x01};
@@ -342,24 +357,24 @@ int main(void)
     //resent the LEDs of the corn using 80d (0x50h) command
     buffer[0] = 115;  // Start byte = 's'
     buffer[1] = 80;
-    buffer[2] = 80;
+    buffer[2] = 0;
     buffer[3] = 0;    // TBD R / UV settings
     buffer[4] = 0;    // TBD G / UV settings
     buffer[5] = 0;    // TBD B / UV settings
     buffer[6] = 0;
     buffer[7] = 114;  // End byte = 'r'
-    buffer[8] = 0;    // Payload checksum
+    buffer[8] = 35;    // Payload checksum
 
     // TDOD: turn this into a function...
     buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
         buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
         buffer[6] + buffer[7];
-    
-    cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
-         << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
-         << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
-         << (int)buffer[5] << ", " << (int)buffer[7] << ", " 
-         << (int)buffer[8] << endl;
+    if (debug)
+        cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
+             << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
+             << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
+             << (int)buffer[6] << ", " << (int)buffer[7] << ", " 
+             << (int)buffer[8] << endl;
     //sprintf (buffer, "%d", n);
     //printf ("[%s] is a to uart\n",buffer);
 
@@ -392,16 +407,12 @@ int main(void)
                 send_data[1] = 0b10000000 |( ((a2dChannel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
                 send_data[2] = 1; // third byte transmitted....don't care
                 
-                //just for checking a specific SPIdev/channel
-                //if (a2dChannel == 0 && iSPIdev == 3)
-                //{
+
                 //send the data + HIGH-LOW the relevant pin
                 bcm2835_gpio_write(CSpin[iSPIdev], LOW);
-                //usleep(1000000);
                 bcm2835_spi_transfern(send_data,3);
                 bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
-                //usleep(1000000);
-                //usleep(100);
+
                 //data[0] first byte of the response - don't care
                 a2dVal = 0;
                 a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
@@ -423,7 +434,8 @@ int main(void)
                 {
                     // add to queue to play]
                     //usleep(10000);
-                    cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
+                    if (debug)
+                        cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
                     
                     char buffer [MSG_SIZE]; //payload
                     //byte 0 - start byte
@@ -450,6 +462,7 @@ int main(void)
                     buffer[7] = 114;  // End byte = 'r'
                     buffer[8] = 0;    // Payload checksum
                     
+                    
                     // calc check sum
                     for (int k = 0 ; k < MSG_SIZE-1 ; k++)
                         buffer[MSG_SIZE-1] += buffer[k];
@@ -470,19 +483,19 @@ int main(void)
                     
                     i_thread ++;
                     i_thread = i_thread % (MAX_NOTES-1);
-
-                    cout << "starting to play sound thread" << endl;
+                    
+                    if (debug)
+                        cout << "starting to play sound thread" << endl;
                     int note_num_play = iSPIdev * 8 + a2dChannel;
                             
                     rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)note_num_play);
                     if (rc)
                     {
+                        if (debug)
                             cout << "Error:unable to create thread," << rc << endl;
-                            exit(-1);   //TODO: Why does it happen?
+                        exit(-1);   //TODO: Why does it happen?
                     }
-                    // TODO: move it to the note class 
-                    //"debounce" of 100ms   
-                    //usleep(100000);
+                    
                 }
             }
             // sleep between readings. I'm not sure this is necessary... 
@@ -490,8 +503,8 @@ int main(void)
         }
     }
 
-
-    std::cout << "Exiting SpaceCorn..." << endl;;
+    if (debug)
+        std::cout << "Exiting SpaceCorn..." << endl;;
 
     // clean up our resources
     Mix_FreeChunk(wave);
