@@ -46,7 +46,7 @@ class Note
                 // every cycle the sensor is being sampled and the reading it being averaged
                 // if it is above the noise level times 2 (x2) it considered as a hit, if not
                 // it is being dt in 0.1 to 0.9 ratio
-                int noise;
+                float noise;
                 //the sound chunk to play/mix
                 Mix_Chunk sound_data;
 };
@@ -104,22 +104,34 @@ int Note::setLocation(const Note_Location _loc)
 
 bool Note::tryPlaying(int hit)
 {
-    if (hit > noise)
+    // if the hit was 3 time stringer than the noise
+    if (hit > noise*snrThreshold && hit > piezoThreshold)
     {
+        //if (debug)
+        //    cout << "hit = " << hit << " noise = " << noise << endl;
         struct timeval tp;
         gettimeofday(&tp, NULL);
         long int temp_ms = tp.tv_sec * 1000 + tp.tv_usec / 1000; //get current timestamp in milliseconds
+        
+        //if (debug)
+        //    cout << "temp_ms = " << temp_ms << " Note::getTimeStamp() = " << Note::getTimeStamp() << endl;
         // if it has been over 100ms since the last hit
-        if (abs(Note::getTimeStamp() - temp_ms) > 100)
+        if (abs(temp_ms - Note::getTimeStamp()) > 100)
+        {
+            if (debug)
+                cout << "HIT (in tryPlaying)" << endl;
+            setTimeStamp(); //call time for base line compare
+            noise = (noise * 0.9) + (hit * 0.1);
             return true;
-        else
-            return false;
+            
+        }
     }
-    else
+    else    //this his wasn't strong enough, calc avg
     {
         noise = (noise * 0.9) + (hit * 0.1);
         return false;
     }
+    
 }
 void *PlayNote(Note note_to_play)
 {

@@ -91,6 +91,11 @@ const int CSpin[MAX_LEVEL] = {
     PIN0, PIN1, PIN2, PIN3, PIN4, PIN5, PIN6, PIN7, PIN8, PIN9
 };
 
+// debounce value of the knocks
+const int msThreshold = 100;
+
+//signal to noise ratio/threshold for the knock sensors
+const int snrThreshold = 3;
 
 #ifdef	__cplusplus
 }

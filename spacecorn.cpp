@@ -257,12 +257,12 @@ int main(void)
     std::cout << "Initializing SpaceCorn..." << endl;
     //sound "test" not using SDL
     
-    system("killall omxplayer.bin"); //making sure no other sound is runnning
+    //system("killall omxplayer.bin"); //making sure no other sound is runnning
     
-    system("omxplayer ../sounds/Boot/spacecorn_init.mp3");
+    //system("omxplayer ../sounds/Boot/spacecorn_init.mp3");
     
     //wait 3 sec to finish play the mp3 file
-    usleep(5000000);
+    //usleep(5000000);
     
     //while(1);
     
@@ -337,13 +337,44 @@ int main(void)
                      //even if all the other data byte are remaining the same
                      //this char var will overflow-cycle from 255 -> 0 if incremented
     int tempi;
+
+    char buffer [MSG_SIZE]; //payload
+    //resent the LEDs of the corn using 80d (0x50h) command
+    buffer[0] = 115;  // Start byte = 's'
+    buffer[1] = 80;
+    buffer[2] = 80;
+    buffer[3] = 0;    // TBD R / UV settings
+    buffer[4] = 0;    // TBD G / UV settings
+    buffer[5] = 0;    // TBD B / UV settings
+    buffer[6] = 0;
+    buffer[7] = 114;  // End byte = 'r'
+    buffer[8] = 0;    // Payload checksum
+
+    // TDOD: turn this into a function...
+    buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
+        buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
+        buffer[6] + buffer[7];
+    
+    cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
+         << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
+         << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
+         << (int)buffer[5] << ", " << (int)buffer[7] << ", " 
+         << (int)buffer[8] << endl;
+    //sprintf (buffer, "%d", n);
+    //printf ("[%s] is a to uart\n",buffer);
+
+    //TODO: is it causing any delay regarding sampling? 
+    // maybe create a mutex thread?
+    ///send through the UART
+    RS232_cputs(cport_nr, buffer);
+
     while (1)
     {
         //to be used later to check that the SW doesn't crash due to mem leaks
-        /*
+        /**
         rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)tempi);
-        tempi = (tempi+1)%80;
-        usleep(2000000);
+        tempi = (tempi+1)%68;
+        usleep(500000);
         if (rc)
         {
                 cout << "Error:unable to create thread," << rc << endl;
@@ -380,14 +411,19 @@ int main(void)
                 //a2dVal = 100;
                 
                 //cout << (int)send_data[0] << "  " << (int)send_data[1] << "  " << (int)send_data[2] <<endl;
-                //usleep(100000);
+                //usleep(500000);
                 // maybe create a moving average per sensor?
-                if (a2dVal>piezoThreshold)
+                
+                //if (iSPIdev == a2dChannel == 0)
+                //    notes_list[iSPIdev][a2dChannel].tryPlaying(a2dVal);
+                /*        if (debug)
+                            cout << "hit detected using moving average, value: " << a2dVal << endl;
+                */
+                if (notes_list[iSPIdev][a2dChannel].tryPlaying(a2dVal))
                 {
                     // add to queue to play]
                     //usleep(10000);
                     cout << "Result: " << a2dVal << " SPI: " << iSPIdev << " Channel: " << a2dChannel <<endl;
-                    
                     
                     char buffer [MSG_SIZE]; //payload
                     //byte 0 - start byte
@@ -414,20 +450,19 @@ int main(void)
                     buffer[7] = 114;  // End byte = 'r'
                     buffer[8] = 0;    // Payload checksum
                     
-                    // TDOD: turn this into a function...
-                    buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
-                        buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
-                        buffer[6] + buffer[7];
-                    cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
-                         << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
-                         << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
-                         << (int)buffer[5] << ", " << (int)buffer[7] << ", " 
-                         << (int)buffer[8] << endl;
+                    // calc check sum
+                    for (int k = 0 ; k < MSG_SIZE-1 ; k++)
+                        buffer[MSG_SIZE-1] += buffer[k];
+                    
+                    if (debug)
+                        cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
+                            << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
+                            << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
+                            << (int)buffer[6] << ", " << (int)buffer[7] << ", " 
+                            << (int)buffer[8] << endl;
                     //sprintf (buffer, "%d", n);
                     //printf ("[%s] is a to uart\n",buffer);
                     
-                    //TODO: is it causing any delay regarding sampling? 
-                    // maybe create a mutex thread?
                     ///send through the UART
                     RS232_cputs(cport_nr, buffer);
                     seqCounter++; //increase sequence counter by 1 every transmission
@@ -445,13 +480,12 @@ int main(void)
                             cout << "Error:unable to create thread," << rc << endl;
                             exit(-1);   //TODO: Why does it happen?
                     }
-                    
-
-                    
+                    // TODO: move it to the note class 
                     //"debounce" of 100ms   
                     //usleep(100000);
                 }
             }
+            // sleep between readings. I'm not sure this is necessary... 
             usleep(100);
         }
     }
