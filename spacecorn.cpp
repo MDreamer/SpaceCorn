@@ -304,6 +304,7 @@ int main(void)
     //thread vars
     pthread_t threads[MAX_NOTES];
     pthread_t thread1;
+    
     int rc;
     int i_thread=0;
 
@@ -489,6 +490,7 @@ int main(void)
                     int note_num_play = iSPIdev * 8 + a2dChannel;
                             
                     rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)note_num_play);
+                    pthread_detach(threads[i_thread]);
                     if (rc)
                     {
                         if (debug)
