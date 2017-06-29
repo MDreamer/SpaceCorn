@@ -125,6 +125,10 @@ bool Note::tryPlaying(int hit)
             return true;
             
         }
+        else //it played in the last 100ms - do nothing - so avg won't be affected
+        {
+            return false;
+        }
     }
     else    //this his wasn't strong enough, calc avg
     {

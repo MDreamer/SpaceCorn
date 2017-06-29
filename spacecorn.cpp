@@ -17,6 +17,7 @@
 #include <vector>
 #include "RS-232/rs232.h"
 #include "config.h"
+#include "SPI_bus.h"
 
 Note notes_list[MAX_LEVEL][MAX_RING];
  
@@ -25,6 +26,8 @@ Mix_Chunk wavs[MAX_NOTES];
 Mix_Chunk *wave = NULL;
 // Our music file
 Mix_Music *music = NULL;
+
+SPI_bus spi_sensors;
 
 int
   cport_nr=22,        /* /dev/ttyS0 (COM1 on windows) */
@@ -114,12 +117,13 @@ int loadSDL()
     }
 
     //Initialize SDL_mixer 
-    if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 ) 
+    if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 1024 ) < 0 ) 
     {
         if (debug)
+        {
             std::cout <<"failed SDL_mixer"<<endl;
-        if (debug)
             printf("Mix_OpenAudio: %s\n", Mix_GetError());
+        }
         return -1; 
             
     }
@@ -132,20 +136,22 @@ int loadSDL()
     if (wave == NULL)
     {
         if (debug)
-            std::cout <<"failed load sound"<<endl;
+        {
+            std::cout <<"failed load sound on loadSDL, path: "<< WAV_PATH <<endl;
+            printf("Mix_OpenAudio: %s\n", Mix_GetError());
+        }
         return -1;
     }
 
-    // Load our music - temporary disables - maybe will be used later
-    // just keeping the code commented for later use..
-    /*
+    // Load our music
+  
     music = Mix_LoadMUS(MUS_PATH);
     if (music == NULL)
     {
         std::cout <<"failed load music (MUS_PATH)"<<endl;
         return -1;
     }
-*/
+    Mix_VolumeMusic((MIX_MAX_VOLUME/2));
     if ( Mix_PlayChannel(-1, wave, 0) == -1 )
     {
         if (debug)
@@ -156,17 +162,16 @@ int loadSDL()
     //let it finish playing
     while ( Mix_Playing(-1) ) ;  
     
-    // Load our music - temporary disables - maybe will be used later
-    // just keeping the code commented for later use..
-    //if ( Mix_PlayMusic( music, -1) == -1 )
-    //        return -1;
+    // Load our music
+    if ( Mix_PlayMusic( music, -1) == -1 )
+            return -1;
 
     //while ( Mix_PlayingMusic() ) ;
 }
 
 /* starts the SPI interface module, also configures the GPIO pins that will allow
  * control over the ChipEnable pins
-*/
+
 int startSPI()
 {
     
@@ -190,6 +195,7 @@ int startSPI()
     //No CS/CE, Control the SPI slave manually thru the GPIO pins
     bcm2835_spi_chipSelect(BCM2835_SPI_CS_NONE); 
 }
+*/
 
 /*
  * /oading the index file that contains all the names of the sound files 
@@ -242,7 +248,7 @@ int loadNotesFile()
         if (wave == NULL)
         {
             if (debug)
-                std::cout <<"failed load sound "<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
+                std::cout <<"failed load sound loadNotesFile"<< notes_list[iLevelCounter][iRingCounter].getNotePath() << endl;
             return -1;
         }
         //sets the new wav sound file the the notes sound array
@@ -271,15 +277,36 @@ int main(void)
         std::cout << "Initializing SpaceCorn..." << endl;
     //sound "test" not using SDL
     
-    //system("killall omxplayer.bin"); //making sure no other sound is runnning
+    system("killall omxplayer.bin"); //making sure no other sound is running
     
-    //system("omxplayer ../sounds/Boot/spacecorn_init.mp3");
+    //system("omxplayer " + INIT_SC);
     
     //wait 3 sec to finish play the mp3 file
-    //usleep(5000000);
+    usleep(5000000);
     
     //while(1);
     
+    // data var that is going to be used in the SPI bus - for send & rcv
+    char send_data[3] = {0x01,0x80,0x01};
+
+    /*
+    if (startSPI() == -1)
+        return -1;
+    */
+    
+    //try to start the bus - if failed kill the program
+    if (spi_sensors.startSPI() == -1)
+        return -1;
+    
+    // try to load sound
+    if (loadSDL() == -1)
+        return -1;
+    
+    // load files
+    if (loadNotesFile() == -1)
+        return -1;
+    
+    // check communication line
     if(RS232_OpenComport(cport_nr, bdrate, mode))
     {
         if (debug)
@@ -289,18 +316,6 @@ int main(void)
     if (debug)
         cout << "open comport opened..."<<endl;
     
-    
-    char send_data[3] = {0x01,0x80,0x01};
-
-    if (loadSDL() == -1)
-        return -1;
-    
-    if (loadNotesFile() == -1)
-        return -1;
-
-    if (startSPI() == -1)
-        return -1;
-
     //thread vars
     pthread_t threads[MAX_NOTES];
     pthread_t thread1;
@@ -349,7 +364,7 @@ int main(void)
      * Stores the ADC in an array to be decided if it should be played - threshold 
      * dependent(can be configured/changed). 
      */
-    char seqCounter; //just a running number to keep the checksum changing
+    char seqCounter=0; //just a running number to keep the checksum changing
                      //even if all the other data byte are remaining the same
                      //this char var will overflow-cycle from 255 -> 0 if incremented
     int tempi;
@@ -358,81 +373,30 @@ int main(void)
     //resent the LEDs of the corn using 80d (0x50h) command
     buffer[0] = 115;  // Start byte = 's'
     buffer[1] = 80;
-    buffer[2] = 0;
-    buffer[3] = 0;    // TBD R / UV settings
-    buffer[4] = 0;    // TBD G / UV settings
-    buffer[5] = 0;    // TBD B / UV settings
-    buffer[6] = 0;
-    buffer[7] = 114;  // End byte = 'r'
-    buffer[8] = 35;    // Payload checksum
+    buffer[2] = 80;
+    buffer[3] = 0;    // seq
+    buffer[4] = 19;    // seq
 
-    // TDOD: turn this into a function...
-    buffer[MSG_SIZE-1] = buffer[0] + buffer[1] + 
-        buffer[2] + buffer[3] + buffer[4] + buffer[5] + 
-        buffer[6] + buffer[7];
-    if (debug)
-        cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
-             << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
-             << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
-             << (int)buffer[6] << ", " << (int)buffer[7] << ", " 
-             << (int)buffer[8] << endl;
-    //sprintf (buffer, "%d", n);
-    //printf ("[%s] is a to uart\n",buffer);
-
-    //TODO: is it causing any delay regarding sampling? 
-    // maybe create a mutex thread?
-    ///send through the UART
+    // calc check sum
+    //for (int k = 0 ; k < MSG_SIZE-1 ; k++)
+    //    buffer[MSG_SIZE-1] += buffer[k];
+    
     RS232_cputs(cport_nr, buffer);
 
     while (1)
     {
-        //to be used later to check that the SW doesn't crash due to mem leaks
-        /**
-        rc = pthread_create(&threads[i_thread], NULL, PlayNote, (void *)tempi);
-        tempi = (tempi+1)%68;
-        usleep(500000);
-        if (rc)
-        {
-                cout << "Error:unable to create thread," << rc << endl;
-                exit(-1);   //TODO: Why does it happen?
-        }
-        */
         //cyclic reading 0 to 9 = total 10 SPI devices/slaves
         for (iSPIdev = 0; iSPIdev < MAX_LEVEL; iSPIdev++)
         {
             //cyclic reading 0 to 7 = total 8 channels
             for (a2dChannel = 0; a2dChannel < MAX_RING; a2dChannel++)
             {
-                //prepare the datagram for sending
-                send_data[0] = 1;  //  first byte transmitted -> start bit
-                send_data[1] = 0b10000000 |( ((a2dChannel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
-                send_data[2] = 1; // third byte transmitted....don't care
+                // get reading from the SPI bus / piezo sensors array
+                a2dVal = spi_sensors.get_piezo_reading(iSPIdev,a2dChannel);
                 
-
-                //send the data + HIGH-LOW the relevant pin
-                bcm2835_gpio_write(CSpin[iSPIdev], LOW);
-                bcm2835_spi_transfern(send_data,3);
-                bcm2835_gpio_write(CSpin[iSPIdev], HIGH);
-
-                //data[0] first byte of the response - don't care
-                a2dVal = 0;
-                a2dVal = (send_data[1]<< 8) & 0b1100000000; //merge data[1] & data[2] to get result
-                a2dVal |=  (send_data[2] & 0xff);
-                //}
-                //else
-                //a2dVal = 100;
-                
-                //cout << (int)send_data[0] << "  " << (int)send_data[1] << "  " << (int)send_data[2] <<endl;
-                //usleep(500000);
-                // maybe create a moving average per sensor?
-                
-                //if (iSPIdev == a2dChannel == 0)
-                //    notes_list[iSPIdev][a2dChannel].tryPlaying(a2dVal);
-                /*        if (debug)
-                            cout << "hit detected using moving average, value: " << a2dVal << endl;
-                */
                 if (notes_list[iSPIdev][a2dChannel].tryPlaying(a2dVal))
                 {
+                    
                     // add to queue to play]
                     //usleep(10000);
                     if (debug)
@@ -456,12 +420,8 @@ int main(void)
                     buffer[0] = 115;  // Start byte = 's'
                     buffer[1] = 50;
                     buffer[2] = (char)senNum;
-                    buffer[3] = 0;    // TBD R / UV settings
-                    buffer[4] = 0;    // TBD G / UV settings
-                    buffer[5] = 0;    // TBD B / UV settings
-                    buffer[6] = seqCounter;
-                    buffer[7] = 114;  // End byte = 'r'
-                    buffer[8] = 0;    // Payload checksum
+                    buffer[3] = seqCounter;
+                    buffer[4] = 0;    // Payload checksum
                     
                     
                     // calc check sum
@@ -470,10 +430,7 @@ int main(void)
                     
                     if (debug)
                         cout << "sent: " << (int)buffer[0] << ", " << (int)buffer[1] << ", " 
-                            << (int)buffer[2] << ", " << (int)buffer[3] << ", " 
-                            << (int)buffer[4] << ", " << (int)buffer[5] << ", " 
-                            << (int)buffer[6] << ", " << (int)buffer[7] << ", " 
-                            << (int)buffer[8] << endl;
+                             << (int)buffer[2] << ", " << (int)buffer[3] << "," << (int)buffer[4] <<endl;
                     //sprintf (buffer, "%d", n);
                     //printf ("[%s] is a to uart\n",buffer);
                     
@@ -514,9 +471,10 @@ int main(void)
 
     // quit SDL_mixer
     Mix_CloseAudio();
-
+    /*
     bcm2835_spi_end();
     bcm2835_close();
+     */
     pthread_exit(NULL);
 
     return 0;

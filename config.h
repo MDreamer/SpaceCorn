@@ -11,10 +11,10 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
+#include <bcm2835.h>
 //the location of the note on the tree
 //the location is Level and number based. The Levels are being counted from the buttom up - starting form "0"
-//anf the nubmer is the number of the bottle/note clockwise according to the numbers on the Level. 
+//and the nubmer is the number of the bottle/note clockwise according to the numbers on the Level. 
 //There are 8 (0-7) Numbers/Notes in each Level
 //
 //			0
@@ -40,7 +40,19 @@ extern "C" {
 // Just for playing an example file for tryouts:
 // hardcoded path - not fom the txt file
 #define WAV_PATH "../sounds/39148__jobro__piano-ff-001.wav"
-#define MUS_PATH "../sounds/Wonderland_background.ogg"
+#define MUS_PATH "../sounds/Wonderland_background.mp3"
+
+#define INIT_SC "../sounds/Boot/spacecorn_init.mp3"
+#define INIT_SOUND "../sounds/Boot/spacecorn_sound.mp3"
+#define INIT_LED "../sounds/Boot/spacecorn_light.mp3"
+#define INIT_COMM "../sounds/Boot/spacecorn_driver_test.mp3"
+#define COMM_ACK "../sounds/Boot/spacecorn_ack.mp3"
+#define TEST_SC "../sounds/Boot/spacecorn_system_test.mp3"
+#define FIVE_NOTES "../sounds/Boot/five_notes.mp3"
+#define KILL_RCV "../sounds/Boot/spacecorn_shutdown_received.mp3"
+#define KILL_SOUND "../sounds/Boot/spacecord_sound_deactivate.mp3"
+#define KILL_LED "../sounds/Boot/spacecord_led_deactivate.mp3"
+#define KILL_CORE "../sounds/Boot/spacecorn_shutdown.mp3"
 
 // A threshold value for the ADC reading in order deal with the SNR
 #define piezoThreshold 20
@@ -62,18 +74,6 @@ extern "C" {
 //for vocal alerts
 #define vocal false
 
-#define SC_START_PATH "../sounds/Boot/spacecorn_init.mp3"
-#define LED_START_PATH "../sounds/Boot/spacecorn_light.mp3"
-#define SOUNDS_START_PATH "../sounds/Boot/spacecorn_sound.mp3"
-#define COMM_TEST_PATH "../sounds/Boot/spacecorn_driver_test.mp3"
-#define COMM_ACK_PATH "../sounds/Boot/spacecorn_ack.mp3"
-#define SYS_TEST_PATH "../sounds/Boot/spacecorn_system_test.mp3"
-#define SC_SHUTDOWN_PATH "../sounds/Boot/spacecorn_shutdown_received.mp3"
-#define LED_END_PATH "../sounds/Boot/spacecord_led_deactivate.mp3"
-#define SOUND_END_PATH "../sounds/Boot/spacecord_sound_deactivate.mp3"
-#define SC_END_PATH "../sounds/Boot/spacecorn_shutdown.mp3"
-
-
 //byte 0 - start byte
 //byte 1 - command - addressble LED/UV light
 //byte 2 - data - No# of LED/ UV LED
@@ -83,7 +83,16 @@ extern "C" {
 //byte 6 - running num seq
 //byte 7 - end byte
 //byte 8 - checksum
-#define MSG_SIZE  9
+//TODO: it looks like 9 byte is too much and it had some errors - moving to 5 and will chekc later
+//#define MSG_SIZE 9
+
+//byte 0 - start byte
+//byte 1 - command - addressble LED/UV light
+//byte 2 - data - No# of LED/ UV LED
+//byte 3 - running num seq
+//byte 4 - checksum
+#define MSG_SIZE 5
+
 
 using namespace std;
 
@@ -103,3 +112,4 @@ const int snrThreshold = 3;
 
 #endif	/* CONFIG_H */
 
+    

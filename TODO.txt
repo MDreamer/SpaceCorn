@@ -1,0 +1,7 @@
+Use external USB sound card
+Auto boot
+Move core LED control to Pi
+fade kernels
+Multiple instruments
+refactoring - core class with observer that constantly checks for the piezo
+    and lunch sound when it detects a hit. It should use the SPI and the notes classes
