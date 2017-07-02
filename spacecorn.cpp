@@ -277,22 +277,12 @@ int main(void)
         std::cout << "Initializing SpaceCorn..." << endl;
     //sound "test" not using SDL
     
-    system("killall omxplayer.bin"); //making sure no other sound is running
-    
+    //system("killall aplay"); //making sure no other sound is running
+
     //system("omxplayer " + INIT_SC);
     
     //wait 3 sec to finish play the mp3 file
-    usleep(5000000);
-    
-    //while(1);
-    
-    // data var that is going to be used in the SPI bus - for send & rcv
-    char send_data[3] = {0x01,0x80,0x01};
-
-    /*
-    if (startSPI() == -1)
-        return -1;
-    */
+    //usleep(5000000);
     
     //try to start the bus - if failed kill the program
     if (spi_sensors.startSPI() == -1)
@@ -452,7 +442,7 @@ int main(void)
                     {
                         if (debug)
                             cout << "Error:unable to create thread," << rc << endl;
-                        exit(-1);   //TODO: Why does it happen?
+                        exit(-1);   
                     }
                     
                 }

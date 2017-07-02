@@ -29,7 +29,7 @@ public:
     int startSPI();
     int get_piezo_reading(int _slave, int _channel);
 private:
-    void wrap_datagram(char _datagram[3], int _channel);
+    void wrap_datagram(char (&_datagram)[3], int _channel);
     int unwrap_datagram(char _datagram[3]);
 };
 

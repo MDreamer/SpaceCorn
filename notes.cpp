@@ -105,7 +105,7 @@ int Note::setLocation(const Note_Location _loc)
 bool Note::tryPlaying(int hit)
 {
     // if the hit was 3 time stringer than the noise
-    if (hit > noise*snrThreshold && hit > piezoThreshold)
+    if ((hit > (noise*snrThreshold)) && (hit > piezoThreshold))
     {
         //if (debug)
         //    cout << "hit = " << hit << " noise = " << noise << endl;
@@ -119,7 +119,7 @@ bool Note::tryPlaying(int hit)
         if (abs(temp_ms - Note::getTimeStamp()) > 100)
         {
             if (debug)
-                cout << "HIT (in tryPlaying)" << endl;
+                cout << "HIT (in tryPlaying) " << "noise level: " << noise << " hit: " << hit << " SNR_threshold: " << (noise*snrThreshold) << endl;
             setTimeStamp(); //call time for base line compare
             noise = (noise * 0.9) + (hit * 0.1);
             return true;

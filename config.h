@@ -101,7 +101,7 @@ const int CSpin[MAX_LEVEL] = {
 };
 
 // debounce value of the knocks
-const int msThreshold = 100;
+const int msThreshold = 25;
 
 //signal to noise ratio/threshold for the knock sensors
 const int snrThreshold = 3;

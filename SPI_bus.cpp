@@ -18,13 +18,13 @@ using namespace std;
 SPI_bus::SPI_bus() {
 }
 
-void SPI_bus::wrap_datagram(char _datagram[3], int _channel)
+void SPI_bus::wrap_datagram(char (&_datagram)[3], int _channel)
 {
     char _send_data[3];
     //prepare the datagram for sending
-    _send_data[0] = 1;  //  first byte transmitted -> start bit
-    _send_data[1] = 0b10000000 |( ((_channel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
-    _send_data[2] = 1; // third byte transmitted....don't care
+    _datagram[0] = 1;  //  first byte transmitted -> start bit
+    _datagram[1] = 0b10000000 |( ((_channel & 7) << 4)); // second byte transmitted -> (SGL/DIF = 1, D2=D1=D0=0)
+    _datagram[2] = 1; // third byte transmitted....don't care
 
 }
 
