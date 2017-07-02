@@ -151,7 +151,7 @@ int loadSDL()
         std::cout <<"failed load music (MUS_PATH)"<<endl;
         return -1;
     }
-    Mix_VolumeMusic((MIX_MAX_VOLUME/2));
+    Mix_VolumeMusic((MIX_MAX_VOLUME/8));
     if ( Mix_PlayChannel(-1, wave, 0) == -1 )
     {
         if (debug)
@@ -466,6 +466,6 @@ int main(void)
     bcm2835_close();
      */
     pthread_exit(NULL);
-
+    
     return 0;
 }
