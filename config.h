@@ -12,6 +12,7 @@
 extern "C" {
 #endif
 #include <bcm2835.h>
+
 //the location of the note on the tree
 //the location is Level and number based. The Levels are being counted from the buttom up - starting form "0"
 //and the nubmer is the number of the bottle/note clockwise according to the numbers on the Level. 
@@ -42,7 +43,7 @@ extern "C" {
 #define WAV_PATH "../sounds/39148__jobro__piano-ff-001.wav"
 #define MUS_PATH "../sounds/Wonderland_background.mp3"
 
-#define INIT_SC "../sounds/Boot/spacecorn_init.mp3"
+/*
 #define INIT_SOUND "../sounds/Boot/spacecorn_sound.mp3"
 #define INIT_LED "../sounds/Boot/spacecorn_light.mp3"
 #define INIT_COMM "../sounds/Boot/spacecorn_driver_test.mp3"
@@ -53,7 +54,7 @@ extern "C" {
 #define KILL_SOUND "../sounds/Boot/spacecord_sound_deactivate.mp3"
 #define KILL_LED "../sounds/Boot/spacecord_led_deactivate.mp3"
 #define KILL_CORE "../sounds/Boot/spacecorn_shutdown.mp3"
-
+*/
 // A threshold value for the ADC reading in order deal with the SNR
 #define piezoThreshold 20
 

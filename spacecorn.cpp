@@ -19,6 +19,19 @@
 #include "config.h"
 #include "SPI_bus.h"
 
+const string MPLAYER = "mplayer ";
+const string INIT_SC = "../sounds/Boot/spacecorn_init.mp3";
+const char *INIT_SOUND = "../sounds/Boot/spacecorn_sound.mp3";
+const string INIT_LED = "../sounds/Boot/spacecorn_light.mp3";
+const string INIT_COMM = "../sounds/Boot/spacecorn_driver_test.mp3";
+const string COMM_ACK = "../sounds/Boot/spacecorn_ack.mp3";
+const string TEST_SC = "../sounds/Boot/spacecorn_system_test.mp3";
+const string FIVE_NOTES = "../sounds/Boot/five_notes.mp3";
+const string KILL_RCV = "../sounds/Boot/spacecorn_shutdown_received.mp3";
+const string KILL_SOUND = "../sounds/Boot/spacecord_sound_deactivate.mp3";
+const string KILL_LED = "../sounds/Boot/spacecord_led_deactivate.mp3";
+const string KILL_CORE = "../sounds/Boot/spacecorn_shutdown.mp3";
+
 Note notes_list[MAX_LEVEL][MAX_RING];
  
 Mix_Chunk wavs[MAX_NOTES];
@@ -130,14 +143,14 @@ int loadSDL()
     Mix_Volume(1,MIX_MAX_VOLUME);
     //while(1);
     Mix_AllocateChannels(24);
-
+    
     // Load our sound effect
-    wave = Mix_LoadWAV(WAV_PATH);
+    wave = Mix_LoadWAV(INIT_SOUND);
     if (wave == NULL)
     {
         if (debug)
         {
-            std::cout <<"failed load sound on loadSDL, path: "<< WAV_PATH <<endl;
+            std::cout <<"failed load sound on loadSDL, path: "<< INIT_SOUND <<endl;
             printf("Mix_OpenAudio: %s\n", Mix_GetError());
         }
         return -1;
@@ -279,11 +292,10 @@ int main(void)
     
     //system("killall aplay"); //making sure no other sound is running
 
-    //system("omxplayer " + INIT_SC);
-    
-    //wait 3 sec to finish play the mp3 file
-    //usleep(5000000);
-    
+    string tmpStr_sc = MPLAYER + INIT_SC;
+    const char *cstr_sc = tmpStr_sc.c_str();
+    system(cstr_sc);
+
     //try to start the bus - if failed kill the program
     if (spi_sensors.startSPI() == -1)
         return -1;
